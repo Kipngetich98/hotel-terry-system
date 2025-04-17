@@ -1,0 +1,50 @@
+{
+  "name": "restaurant-management-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
+    "@tanstack/react-query": "^5.8.4",
+    "axios": "^1.6.2",
+    "dexie": "^3.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.0.0",
+    "react-router-dom": "^6.20.0",
+    "tailwindcss": "^3.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.39",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.2",
+    "vite-plugin-pwa": "^0.17.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

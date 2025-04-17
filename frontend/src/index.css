@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4f46e5;
+  --primary-dark: #4338ca;
+  --secondary: #f59e0b;
+  --secondary-dark: #d97706;
+  --background: #f9fafb;
+  --text: #1f2937;
+  --text-light: #6b7280;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+/* Offline indicator styles */
+.offline-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--warning);
+  color: white;
+  text-align: center;
+  padding: 0.5rem;
+  z-index: 9999;
+  font-weight: bold;
+}
+
+/* Touch-friendly styles for POS */
+.pos-button {
+  @apply rounded-lg p-4 text-lg font-medium transition-colors;
+  min-height: 3rem;
+  touch-action: manipulation;
+}
+
+/* Responsive table styles */
+.responsive-table {
+  @apply w-full overflow-x-auto;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply animate-spin h-5 w-5 text-primary;
+}
