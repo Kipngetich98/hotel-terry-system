@@ -28,16 +28,28 @@ const Layout: React.FC = () => {
   }, [dispatch, sidebarOpen]);
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-600 bg-opacity-50 z-20 md:hidden" 
+          onClick={handleToggleSidebar}
+        ></div>
+      )}
+      
       {/* Sidebar */}
       <Sidebar isOpen={sidebarOpen} />
       
       {/* Main Content */}
-      <div className={`flex flex-col flex-1 transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
+      <div 
+        className={`flex flex-col flex-1 w-full transition-all duration-300 ease-in-out ${
+          sidebarOpen ? 'md:ml-64' : 'md:ml-20'
+        }`}
+      >
         <Navbar onToggleSidebar={handleToggleSidebar} />
         
         {isOffline && (
-          <div className="bg-yellow-50 border-b border-yellow-100 p-2">
+          <div className="bg-yellow-50 border-b border-yellow-100 p-2 shadow-sm">
             <div className="container mx-auto px-4">
               <div className="flex items-center text-yellow-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -49,13 +61,15 @@ const Layout: React.FC = () => {
           </div>
         )}
         
-        <main className="flex-1 p-6 overflow-auto">
-          <div className="container mx-auto px-4">
-            <Outlet />
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <div className="container mx-auto px-2 md:px-4">
+            <div className="bg-white rounded-lg shadow-sm p-4 md:p-6">
+              <Outlet />
+            </div>
           </div>
         </main>
         
-        <footer className="p-4 text-center text-sm text-gray-500 border-t bg-white">
+        <footer className="p-4 text-center text-sm text-gray-500 border-t bg-white shadow-inner">
           <div className="container mx-auto">
             &copy; {new Date().getFullYear()} AUNTY'S COMFORT FOOD LIMITED. All rights reserved.
           </div>

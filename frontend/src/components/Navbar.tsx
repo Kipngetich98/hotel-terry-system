@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import { logout } from '../store/slices/authSlice';
@@ -12,6 +12,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const { user } = useSelector((state: RootState) => state.auth);
   const { isOffline } = useSelector((state: RootState) => state.ui);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -21,8 +22,21 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
     setDropdownOpen(!dropdownOpen);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
-    <header className="bg-white border-b shadow-md h-16 flex items-center justify-between px-6">
+    <header className="bg-white border-b shadow-md h-16 flex items-center justify-between px-4 md:px-6">
       <div className="flex items-center">
         <button
           onClick={onToggleSidebar}
@@ -45,12 +59,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           </svg>
         </button>
         
-        <div className="ml-4 md:ml-6">
-          <h2 className="text-lg font-semibold text-gray-800">AUNTY'S COMFORT FOOD</h2>
+        <div className="ml-3 md:ml-6">
+          <h2 className="text-base md:text-lg font-semibold text-gray-800 truncate">AUNTY'S COMFORT FOOD</h2>
         </div>
       </div>
 
-      <div className="flex items-center space-x-6">
+      <div className="flex items-center space-x-2 md:space-x-6">
         {/* Network Status Indicator */}
         <div className="hidden md:flex items-center">
           <span className={`h-2 w-2 rounded-full mr-2 ${isOffline ? 'bg-red-500' : 'bg-green-500'}`}></span>
@@ -67,12 +81,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
 
         {/* User Dropdown */}
         {user && (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <div 
-              className="flex items-center space-x-3 cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
+              className="flex items-center space-x-2 cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
               onClick={toggleDropdown}
             >
-              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-md">
+              <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-md">
                 {user.fullName.charAt(0)}
               </div>
               <span className="text-sm font-medium hidden md:block">{user.fullName}</span>
@@ -83,7 +97,7 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             
             {/* Dropdown Menu */}
             {dropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10 border">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-50 border">
                 <div className="px-4 py-2 border-b">
                   <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
