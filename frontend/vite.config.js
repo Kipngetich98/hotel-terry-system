@@ -9,7 +9,8 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: [
       'ssh-key-generator-tunnel-umv6mse9.devinapps.com',
-      'b9e5-41-80-114-9.ngrok-free.app'
+      'b9e5-41-80-114-9.ngrok-free.app',
+      'wise-shoes-beam.loca.lt'
     ],
   },
   build: {
