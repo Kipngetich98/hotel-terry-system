@@ -1,27 +1,138 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import TransactionModal from '../components/modals/TransactionModal';
+import ExpenseModal from '../components/modals/ExpenseModal';
+import DeleteConfirmationModal from '../components/modals/DeleteConfirmationModal';
+
+interface Transaction {
+  id: number;
+  date: string;
+  type: 'sale' | 'expense';
+  amount: number;
+  description: string;
+  paymentMethod: string;
+  reference: string;
+}
+
+interface Expense {
+  id: number;
+  date: string;
+  category: string;
+  amount: number;
+  description: string;
+  paymentMethod: string;
+  reference: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
 
 const Accounting: React.FC = () => {
   const { isOffline } = useSelector((state: RootState) => state.ui);
   const [activeTab, setActiveTab] = useState<'transactions' | 'expenses' | 'reports'>('transactions');
   const [dateRange, setDateRange] = useState<'today' | 'week' | 'month' | 'custom'>('today');
   
-  const demoTransactions = [
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [currentTransaction, setCurrentTransaction] = useState<Partial<Transaction> | null>(null);
+  const [currentExpense, setCurrentExpense] = useState<Partial<Expense> | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ id: number; type: string; name: string } | null>(null);
+  
+  const [demoTransactions, setDemoTransactions] = useState<Transaction[]>([
     { id: 1, date: '2025-04-17', type: 'sale', amount: 2500, description: 'Order #1001', paymentMethod: 'mpesa', reference: 'MPESA123456' },
     { id: 2, date: '2025-04-17', type: 'sale', amount: 1800, description: 'Order #1002', paymentMethod: 'cash', reference: '' },
     { id: 3, date: '2025-04-17', type: 'expense', amount: -5000, description: 'Supplier payment', paymentMethod: 'mpesa', reference: 'MPESA654321' },
     { id: 4, date: '2025-04-16', type: 'sale', amount: 3200, description: 'Order #1000', paymentMethod: 'card', reference: 'CARD987654' },
     { id: 5, date: '2025-04-16', type: 'expense', amount: -1200, description: 'Utilities', paymentMethod: 'mpesa', reference: 'MPESA789012' },
-  ];
+  ]);
   
-  const demoExpenses = [
+  const [demoExpenses, setDemoExpenses] = useState<Expense[]>([
     { id: 1, date: '2025-04-17', category: 'Inventory', amount: 5000, description: 'Supplier payment', paymentMethod: 'mpesa', reference: 'MPESA654321', status: 'approved' },
     { id: 2, date: '2025-04-16', category: 'Utilities', amount: 1200, description: 'Electricity bill', paymentMethod: 'mpesa', reference: 'MPESA789012', status: 'approved' },
     { id: 3, date: '2025-04-15', category: 'Rent', amount: 15000, description: 'Monthly rent', paymentMethod: 'bank', reference: 'BANK123456', status: 'approved' },
     { id: 4, date: '2025-04-14', category: 'Salaries', amount: 25000, description: 'Staff salaries', paymentMethod: 'bank', reference: 'BANK654321', status: 'pending' },
     { id: 5, date: '2025-04-13', category: 'Maintenance', amount: 2000, description: 'Kitchen equipment repair', paymentMethod: 'cash', reference: '', status: 'approved' },
-  ];
+  ]);
+  
+  const filteredTransactions = demoTransactions.filter(transaction => {
+    return true; // Show all for demo
+  });
+  
+  const filteredExpenses = demoExpenses.filter(expense => {
+    return true; // Show all for demo
+  });
+  
+  const handleAddTransaction = () => {
+    setCurrentTransaction(null);
+    setIsTransactionModalOpen(true);
+  };
+  
+  const handleEditTransaction = (transaction: Transaction) => {
+    setCurrentTransaction(transaction);
+    setIsTransactionModalOpen(true);
+  };
+  
+  const handleAddExpense = () => {
+    setCurrentExpense(null);
+    setIsExpenseModalOpen(true);
+  };
+  
+  const handleEditExpense = (expense: Expense) => {
+    setCurrentExpense(expense);
+    setIsExpenseModalOpen(true);
+  };
+  
+  const handleDeleteConfirmation = (id: number, type: string, name: string) => {
+    setItemToDelete({ id, type, name });
+    setIsDeleteModalOpen(true);
+  };
+  
+  const handleSaveTransaction = (transaction: Partial<Transaction>) => {
+    if (transaction.id) {
+      setDemoTransactions(demoTransactions.map(item => 
+        item.id === transaction.id ? { ...item, ...transaction } as Transaction : item
+      ));
+    } else {
+      const newTransaction = {
+        ...transaction,
+        id: Math.max(0, ...demoTransactions.map(t => t.id)) + 1
+      } as Transaction;
+      
+      setDemoTransactions([newTransaction, ...demoTransactions]);
+    }
+    
+    setIsTransactionModalOpen(false);
+  };
+  
+  const handleSaveExpense = (expense: Partial<Expense>) => {
+    if (expense.id) {
+      setDemoExpenses(demoExpenses.map(item => 
+        item.id === expense.id ? { ...item, ...expense } as Expense : item
+      ));
+    } else {
+      const newExpense = {
+        ...expense,
+        id: Math.max(0, ...demoExpenses.map(e => e.id)) + 1
+      } as Expense;
+      
+      setDemoExpenses([newExpense, ...demoExpenses]);
+    }
+    
+    setIsExpenseModalOpen(false);
+  };
+  
+  const handleDelete = () => {
+    if (!itemToDelete) return;
+    
+    if (itemToDelete.type === 'transaction') {
+      setDemoTransactions(demoTransactions.filter(item => item.id !== itemToDelete.id));
+    } else if (itemToDelete.type === 'expense') {
+      setDemoExpenses(demoExpenses.filter(item => item.id !== itemToDelete.id));
+    }
+    
+    setIsDeleteModalOpen(false);
+    setItemToDelete(null);
+  };
   
   const totalSales = demoTransactions
     .filter(t => t.type === 'sale')
@@ -144,7 +255,13 @@ const Accounting: React.FC = () => {
         </div>
         
         <div>
-          <button className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark">
+          <button 
+            onClick={() => {
+              if (activeTab === 'transactions') handleAddTransaction();
+              else if (activeTab === 'expenses') handleAddExpense();
+            }}
+            className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+          >
             {activeTab === 'transactions' && 'New Transaction'}
             {activeTab === 'expenses' && 'New Expense'}
             {activeTab === 'reports' && 'Generate Report'}
@@ -209,7 +326,18 @@ const Accounting: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary hover:text-primary-dark">View</button>
+                    <button 
+                      onClick={() => handleEditTransaction(transaction)} 
+                      className="text-primary hover:text-primary-dark mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteConfirmation(transaction.id, 'transaction', transaction.description)} 
+                      className="text-danger hover:text-red-700"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -272,8 +400,18 @@ const Accounting: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-primary hover:text-primary-dark mr-3">Edit</button>
-                    <button className="text-danger hover:text-red-700">Delete</button>
+                    <button 
+                      onClick={() => handleEditExpense(expense)} 
+                      className="text-primary hover:text-primary-dark mr-3"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteConfirmation(expense.id, 'expense', expense.description)} 
+                      className="text-danger hover:text-red-700"
+                    >
+                      Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -299,9 +437,9 @@ const Accounting: React.FC = () => {
               </div>
               
               <div className="border rounded-lg p-4">
-                <h3 className="font-medium mb-4">Profit & Loss Statement</h3>
+                <h3 className="font-medium mb-4">Profit and Loss Statement</h3>
                 <button className="w-full py-2 bg-primary text-white rounded-md hover:bg-primary-dark">
-                  Generate P&L Statement
+                  Generate P and L Statement
                 </button>
               </div>
               
@@ -315,6 +453,29 @@ const Accounting: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Modals */}
+      <TransactionModal 
+        isOpen={isTransactionModalOpen}
+        onClose={() => setIsTransactionModalOpen(false)}
+        onSave={handleSaveTransaction}
+        transaction={currentTransaction}
+      />
+      
+      <ExpenseModal 
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onSave={handleSaveExpense}
+        expense={currentExpense}
+      />
+      
+      <DeleteConfirmationModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        itemType={itemToDelete?.type || ''}
+        itemName={itemToDelete?.name}
+      />
     </div>
   );
 };
