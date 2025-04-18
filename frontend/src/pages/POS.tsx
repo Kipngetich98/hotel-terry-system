@@ -7,8 +7,14 @@ import {
   removeOrderItem, 
   updateOrderItemQuantity,
   setPaymentMethod,
+  setTransactionReference,
   completeOrder
 } from '../store/slices/orderSlice';
+import MpesaPaymentModal from '../components/modals/MpesaPaymentModal';
+import CashPaymentModal from '../components/modals/CashPaymentModal';
+import logger from '../utils/logger';
+import errorHandler, { ErrorCategory, ErrorSeverity } from '../utils/errorHandler';
+import mpesaService from '../services/mpesaService';
 
 interface MenuItemDisplay {
   id: number;
@@ -26,6 +32,11 @@ const POS: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [tableNumber, setTableNumber] = useState<string>('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showMpesaModal, setShowMpesaModal] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
+  const [paymentMessage, setPaymentMessage] = useState('');
   
   const demoMenuItems: MenuItemDisplay[] = [
     { id: 1, name: 'Chicken Curry', price: 850, categoryId: 1 },
@@ -78,19 +89,160 @@ const POS: React.FC = () => {
   };
   
   const handlePaymentMethodSelect = (method: 'mpesa' | 'cash' | 'card') => {
-    dispatch(setPaymentMethod(method));
-    handleCompleteOrder();
+    try {
+      dispatch(setPaymentMethod(method));
+      logger.info('Selected payment method', { method });
+      
+      setShowPaymentModal(false);
+      
+      switch (method) {
+        case 'mpesa':
+          setShowMpesaModal(true);
+          break;
+        case 'cash':
+          setShowCashModal(true);
+          break;
+        case 'card':
+          const cardTransactionId = `CARD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+          handleCompleteOrder(cardTransactionId);
+          break;
+      }
+    } catch (error) {
+      errorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          severity: ErrorSeverity.MEDIUM,
+          category: ErrorCategory.PAYMENT,
+          userMessage: 'Failed to select payment method. Please try again.'
+        }
+      );
+    }
   };
   
-  const handleCompleteOrder = () => {
-    dispatch(completeOrder());
-    setShowPaymentModal(false);
-    alert('Order completed successfully!');
+  const handleMpesaPayment = async (phoneNumber: string) => {
+    try {
+      if (!currentOrder) return;
+      
+      setProcessingPayment(true);
+      setPaymentStatus('processing');
+      setPaymentMessage('Processing M-Pesa payment...');
+      
+      logger.info('Initiating M-Pesa payment', { 
+        phoneNumber, 
+        amount: (currentOrder.totalAmount * 1.16),
+        orderId: currentOrder.id
+      });
+      
+      const orderReference = `ORD-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      
+      const result = await mpesaService.initiateSTKPush(
+        phoneNumber,
+        (currentOrder.totalAmount * 1.16),
+        orderReference,
+        (success, transactionId) => {
+          if (success && transactionId) {
+            logger.info('M-Pesa payment successful', { transactionId });
+            handleCompleteOrder(transactionId);
+          } else {
+            logger.warn('M-Pesa payment failed or cancelled');
+            setProcessingPayment(false);
+            setPaymentStatus('error');
+            setPaymentMessage('Payment failed or was cancelled. Please try again.');
+            setTimeout(() => {
+              setShowMpesaModal(false);
+              setPaymentStatus('idle');
+            }, 3000);
+          }
+        }
+      );
+      
+      if (result.success) {
+        setPaymentMessage(result.message);
+      } else {
+        setProcessingPayment(false);
+        setPaymentStatus('error');
+        setPaymentMessage(result.message);
+        setTimeout(() => {
+          setPaymentStatus('idle');
+        }, 3000);
+      }
+    } catch (error) {
+      const appError = errorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          severity: ErrorSeverity.HIGH,
+          category: ErrorCategory.PAYMENT,
+          userMessage: 'Failed to process M-Pesa payment. Please try again.'
+        }
+      );
+      
+      setProcessingPayment(false);
+      setPaymentStatus('error');
+      setPaymentMessage(appError.metadata.userMessage || 'Payment processing failed');
+      
+      setTimeout(() => {
+        setShowMpesaModal(false);
+        setPaymentStatus('idle');
+      }, 3000);
+    }
+  };
+  
+  const handleCashPayment = (transactionCode: string) => {
+    try {
+      logger.info('Processing cash payment', { transactionCode });
+      handleCompleteOrder(transactionCode);
+    } catch (error) {
+      errorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          severity: ErrorSeverity.MEDIUM,
+          category: ErrorCategory.PAYMENT,
+          userMessage: 'Failed to process cash payment. Please try again.'
+        }
+      );
+    }
+  };
+  
+  const handleCompleteOrder = (transactionReference?: string) => {
+    try {
+      if (transactionReference) {
+        dispatch(setTransactionReference(transactionReference));
+      }
+      
+      dispatch(completeOrder());
+      logger.info('Order completed successfully', { 
+        transactionReference,
+        orderItems: currentOrder?.items.length,
+        totalAmount: currentOrder?.totalAmount
+      });
+      
+      setShowPaymentModal(false);
+      setShowMpesaModal(false);
+      setShowCashModal(false);
+      setProcessingPayment(false);
+      setPaymentStatus('success');
+      setPaymentMessage('Payment successful! Order has been completed.');
+      
+      setTimeout(() => {
+        setPaymentStatus('idle');
+      }, 3000);
+    } catch (error) {
+      errorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          severity: ErrorSeverity.HIGH,
+          category: ErrorCategory.PAYMENT,
+          userMessage: 'Failed to complete order. Please try again.'
+        }
+      );
+    }
   };
   
   const filteredMenuItems = selectedCategoryId
     ? demoMenuItems.filter(item => item.categoryId === selectedCategoryId)
     : demoMenuItems;
+    
+  const totalAmount = currentOrder ? (currentOrder.totalAmount * 1.16) : 0;
   
   return (
     <div className="h-full flex flex-col">
@@ -233,43 +385,99 @@ const POS: React.FC = () => {
         </div>
       </div>
       
-      {/* Payment Modal */}
+      {/* Payment Status Message */}
+      {paymentStatus !== 'idle' && (
+        <div className={`fixed inset-x-0 top-4 mx-auto max-w-md z-50 p-4 rounded-lg shadow-lg ${
+          paymentStatus === 'success' ? 'bg-green-100 border border-green-200' :
+          paymentStatus === 'error' ? 'bg-red-100 border border-red-200' :
+          'bg-blue-100 border border-blue-200'
+        }`}>
+          <div className="flex items-center">
+            {paymentStatus === 'success' && (
+              <svg className="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            )}
+            {paymentStatus === 'error' && (
+              <svg className="w-6 h-6 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            )}
+            {paymentStatus === 'processing' && (
+              <svg className="w-6 h-6 text-blue-600 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+            )}
+            <p className="font-medium">{paymentMessage}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Payment Method Selection Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96">
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
             <h2 className="text-xl font-bold mb-4">Select Payment Method</h2>
             
             <div className="space-y-4">
               <button
                 onClick={() => handlePaymentMethodSelect('mpesa')}
-                className="w-full py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600"
+                className="w-full py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 flex items-center justify-center"
               >
+                <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.5 4.5h3v3h-3v-3zm0 4.5h3v9h-3v-9z"/>
+                </svg>
                 M-Pesa
               </button>
               
               <button
                 onClick={() => handlePaymentMethodSelect('cash')}
-                className="w-full py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600"
+                className="w-full py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 flex items-center justify-center"
               >
+                <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2 6h20v12H2V6zm1 1v10h18V7H3zm5 2h8v1H8V9zm0 2h8v1H8v-1zm0 2h4v1H8v-1z"/>
+                </svg>
                 Cash
               </button>
               
               <button
                 onClick={() => handlePaymentMethodSelect('card')}
-                className="w-full py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600"
+                className="w-full py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 flex items-center justify-center"
               >
+                <svg className="w-6 h-6 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                </svg>
                 Card
               </button>
               
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="w-full py-3 bg-gray-200 text-text rounded-lg font-medium hover:bg-gray-300"
+                className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300"
               >
                 Cancel
               </button>
             </div>
           </div>
         </div>
+      )}
+      
+      {/* M-Pesa Payment Modal */}
+      {showMpesaModal && (
+        <MpesaPaymentModal
+          amount={totalAmount}
+          onSubmit={handleMpesaPayment}
+          onCancel={() => setShowMpesaModal(false)}
+          isProcessing={processingPayment}
+        />
+      )}
+      
+      {/* Cash Payment Modal */}
+      {showCashModal && (
+        <CashPaymentModal
+          amount={totalAmount}
+          onSubmit={handleCashPayment}
+          onCancel={() => setShowCashModal(false)}
+        />
       )}
     </div>
   );

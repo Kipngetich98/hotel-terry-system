@@ -19,6 +19,7 @@ interface Order {
   totalAmount: number;
   paymentMethod?: 'mpesa' | 'cash' | 'card';
   paymentStatus: 'pending' | 'paid' | 'refunded';
+  transactionReference?: string;
   createdAt?: string;
   updatedAt?: string;
   userId?: number;
@@ -106,6 +107,11 @@ const orderSlice = createSlice({
       if (!state.currentOrder) return;
       state.currentOrder.paymentMethod = action.payload;
     },
+    setTransactionReference: (state, action: PayloadAction<string>) => {
+      if (!state.currentOrder) return;
+      state.currentOrder.transactionReference = action.payload;
+      state.currentOrder.paymentStatus = 'paid';
+    },
     completeOrder: (state) => {
       if (!state.currentOrder) return;
       
@@ -147,6 +153,7 @@ export const {
   removeOrderItem,
   updateOrderItemQuantity,
   setPaymentMethod,
+  setTransactionReference,
   completeOrder,
   fetchOrdersStart,
   fetchOrdersSuccess,
