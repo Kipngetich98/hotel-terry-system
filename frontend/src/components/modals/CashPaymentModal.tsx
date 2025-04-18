@@ -1,8 +1,33 @@
+/**
+ * Cash Payment Modal Component
+ * 
+ * This component provides a user interface for processing cash payments.
+ * It automatically generates a unique transaction reference code and
+ * requires staff confirmation that cash has been physically collected.
+ * 
+ * The component handles:
+ * - Automatic generation of unique transaction reference codes
+ * - Two-step confirmation process for cash collection
+ * - Visual feedback for payment confirmation
+ * - Secure transaction recording
+ */
 import React, { useState, useEffect } from 'react';
 
 interface CashPaymentModalProps {
+  /**
+   * The total amount to be paid (including tax)
+   */
   amount: number;
+  
+  /**
+   * Callback function triggered when payment is confirmed
+   * @param transactionCode - Unique transaction reference code
+   */
   onSubmit: (transactionCode: string) => void;
+  
+  /**
+   * Callback function triggered when the user cancels the payment
+   */
   onCancel: () => void;
 }
 
@@ -14,16 +39,36 @@ const CashPaymentModal: React.FC<CashPaymentModalProps> = ({
   const [transactionCode, setTransactionCode] = useState('');
   const [isConfirmed, setIsConfirmed] = useState(false);
   
+  /**
+   * Generate a transaction code on component mount
+   */
   useEffect(() => {
     generateTransactionCode();
   }, []);
 
+  /**
+   * Generates a unique transaction reference code for cash payments
+   * 
+   * The code format is: CSH-{timestamp}-{random}
+   * - timestamp: Last 6 digits of current timestamp
+   * - random: 4-digit random number padded with zeros
+   * 
+   * This ensures each transaction has a unique, traceable reference
+   */
   const generateTransactionCode = () => {
     const timestamp = new Date().getTime().toString().slice(-6);
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     setTransactionCode(`CSH-${timestamp}-${random}`);
   };
 
+  /**
+   * Handles confirmation of cash payment receipt
+   * 
+   * This function:
+   * 1. Updates the UI to show confirmation state
+   * 2. Submits the transaction code to the parent component
+   *    for processing and recording the payment
+   */
   const handleConfirm = () => {
     setIsConfirmed(true);
     onSubmit(transactionCode);

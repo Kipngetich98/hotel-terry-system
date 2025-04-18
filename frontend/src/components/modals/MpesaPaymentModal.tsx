@@ -1,9 +1,40 @@
+/**
+ * M-Pesa Payment Modal Component
+ * 
+ * This component provides a user interface for M-Pesa mobile money payments.
+ * It collects and validates the user's phone number, formats it to the required
+ * standard format (254XXXXXXXXX), and initiates an STK push request.
+ * 
+ * The component handles:
+ * - Phone number validation for Kenyan numbers
+ * - Number formatting to ensure compatibility with M-Pesa API
+ * - Visual feedback during payment processing
+ * - Error state management and user feedback
+ */
 import React, { useState } from 'react';
 
 interface MpesaPaymentModalProps {
+  /**
+   * The total amount to be paid (including tax)
+   */
   amount: number;
+  
+  /**
+   * Callback function triggered when the user submits a valid phone number
+   * The function should initiate the M-Pesa STK push process
+   * @param phoneNumber - Formatted phone number (254XXXXXXXXX)
+   */
   onSubmit: (phoneNumber: string) => Promise<void>;
+  
+  /**
+   * Callback function triggered when the user cancels the payment
+   */
   onCancel: () => void;
+  
+  /**
+   * Flag indicating whether a payment is currently being processed
+   * Used to disable inputs and show loading state
+   */
   isProcessing: boolean;
 }
 
@@ -16,6 +47,16 @@ const MpesaPaymentModal: React.FC<MpesaPaymentModalProps> = ({
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Handles form submission for M-Pesa payment
+   * 
+   * This function:
+   * 1. Validates the phone number using a regex for Kenyan mobile numbers
+   * 2. Formats the phone number to the standard format required by M-Pesa API (254XXXXXXXXX)
+   * 3. Calls the onSubmit callback with the formatted number
+   * 
+   * @param e - React form event
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -27,6 +68,7 @@ const MpesaPaymentModal: React.FC<MpesaPaymentModalProps> = ({
 
     setError(null);
     
+    // Format phone number to standard format (254XXXXXXXXX)
     let formattedNumber = phoneNumber;
     if (phoneNumber.startsWith('0')) {
       formattedNumber = '254' + phoneNumber.substring(1);
@@ -36,6 +78,7 @@ const MpesaPaymentModal: React.FC<MpesaPaymentModalProps> = ({
       formattedNumber = phoneNumber.substring(1);
     }
     
+    // Submit the formatted phone number
     onSubmit(formattedNumber);
   };
 

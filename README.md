@@ -68,3 +68,87 @@ restaurant-management-system/
 - Budget tracking and variance analysis
 - Multi-level approval workflow
 - Audit trails for all financial transactions
+
+## Setup Instructions
+
+### Prerequisites
+- Docker and Docker Compose
+- Node.js 18+ and npm/yarn/pnpm
+- Python 3.10+
+- PostgreSQL 14+
+- Redis 6+
+
+### Local Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Kipngetich98/hotel-terry-system.git
+   cd hotel-terry-system
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   # Copy example environment files
+   cp backend/.env.example backend/.env
+   cp frontend/.env.example frontend/.env
+   ```
+
+3. **Start with Docker Compose (recommended)**
+   ```bash
+   docker-compose up -d
+   ```
+   This will start the PostgreSQL database, Redis, backend API, and frontend development server.
+
+4. **Manual Setup (alternative)**
+   
+   For Backend:
+   ```bash
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -e .
+   uvicorn app.main:app --reload --port 8000
+   ```
+   
+   For Frontend:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+5. **Access the application**
+   - Frontend: http://localhost:8080
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+### Production Deployment
+
+1. **Build Docker images**
+   ```bash
+   docker-compose -f docker-compose.prod.yml build
+   ```
+
+2. **Deploy with Docker Compose**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
+
+3. **Database Migrations**
+   ```bash
+   docker-compose -f docker-compose.prod.yml exec backend alembic upgrade head
+   ```
+
+For more detailed instructions, see:
+- [Backend Setup Guide](./backend/README.md)
+- [Frontend Setup Guide](./frontend/README.md)
+
+## Environment Variables
+
+See the example environment files for a complete list of required variables:
+- [Backend Environment Variables](./backend/.env.example)
+- [Frontend Environment Variables](./frontend/.env.example)
+
+## License
+
+This project is proprietary and confidential. Unauthorized copying, distribution, or use is strictly prohibited.
