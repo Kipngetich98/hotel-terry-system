@@ -34,6 +34,7 @@ const Login: React.FC = () => {
           email,
           fullName: 'Demo User',
           role: 'admin',
+          isActive: true,
         };
         
         const token = 'demo-token';
