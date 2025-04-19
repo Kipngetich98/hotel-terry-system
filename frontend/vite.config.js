@@ -11,7 +11,8 @@ export default defineConfig({
       'ssh-key-generator-tunnel-umv6mse9.devinapps.com',
       'b9e5-41-80-114-9.ngrok-free.app',
       'wise-shoes-beam.loca.lt',
-      'ssh-key-generator-tunnel-b5j6w7bo.devinapps.com'
+      'ssh-key-generator-tunnel-b5j6w7bo.devinapps.com',
+      'ssh-key-generatorapp-tunnel-6li7vzrb.devinapps.com'
     ],
   },
   build: {
@@ -20,5 +21,12 @@ export default defineConfig({
   preview: {
     port: 8080,
     host: true,
+    allowedHosts: [
+      'ssh-key-generator-tunnel-umv6mse9.devinapps.com',
+      'b9e5-41-80-114-9.ngrok-free.app',
+      'wise-shoes-beam.loca.lt',
+      'ssh-key-generator-tunnel-b5j6w7bo.devinapps.com',
+      'ssh-key-generatorapp-tunnel-6li7vzrb.devinapps.com'
+    ],
   }
 });
