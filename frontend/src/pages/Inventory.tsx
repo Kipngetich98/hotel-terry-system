@@ -4,6 +4,7 @@ import { RootState } from '../store';
 import ItemModal from '../components/modals/ItemModal';
 import SupplierModal from '../components/modals/SupplierModal';
 import DeleteConfirmationModal from '../components/modals/DeleteConfirmationModal';
+import PurchaseOrderModal from '../components/modals/PurchaseOrderModal';
 
 const Inventory: React.FC = () => {
   const { isOffline } = useSelector((state: RootState) => state.ui);
@@ -104,6 +105,28 @@ const Inventory: React.FC = () => {
   const handleAddOrder = () => {
     setCurrentOrder(null);
     setIsOrderModalOpen(true);
+  };
+  
+  const handleEditOrder = (order: any) => {
+    setCurrentOrder(order);
+    setIsOrderModalOpen(true);
+  };
+  
+  const handleSaveOrder = (formData: any) => {
+    if (currentOrder) {
+      setDemoOrders(demoOrders.map(order => 
+        order.id === currentOrder.id ? { ...order, ...formData } : order
+      ));
+    } else {
+      const newOrder = {
+        id: Math.max(0, ...demoOrders.map(order => order.id)) + 1,
+        orderNumber: `PO-${new Date().getFullYear()}-${String(demoOrders.length + 1).padStart(3, '0')}`,
+        ...formData,
+        supplierName: demoSuppliers.find(s => s.id === formData.supplierId)?.name || ''
+      };
+      setDemoOrders([...demoOrders, newOrder]);
+    }
+    setIsOrderModalOpen(false);
   };
   
   const handleDeleteConfirmation = (id: number, type: string, name?: string) => {
@@ -450,6 +473,12 @@ const Inventory: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button 
+                        onClick={() => handleEditOrder(order)} 
+                        className="text-primary hover:text-primary-dark mr-3"
+                      >
+                        Edit
+                      </button>
+                      <button 
                         onClick={() => handleDeleteConfirmation(order.id, 'order', order.orderNumber)} 
                         className="text-danger hover:text-red-700"
                       >
@@ -492,6 +521,15 @@ const Inventory: React.FC = () => {
         onConfirm={handleDelete}
         itemType={itemToDelete?.type || ''}
         itemName={itemToDelete?.name}
+      />
+      
+      <PurchaseOrderModal 
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        onSave={handleSaveOrder}
+        order={currentOrder}
+        suppliers={demoSuppliers}
+        inventoryItems={demoItems}
       />
     </div>
   );
