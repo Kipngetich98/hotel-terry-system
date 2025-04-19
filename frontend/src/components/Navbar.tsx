@@ -102,12 +102,12 @@ const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                   <p className="text-sm font-medium text-gray-900">{user.fullName}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
-                <a href="#profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                <button onClick={() => window.location.href = '/settings/profile'} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   Your Profile
-                </a>
-                <a href="#settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                </button>
+                <button onClick={() => window.location.href = '/settings'} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                   Settings
-                </a>
+                </button>
                 <div className="border-t"></div>
                 <button
                   onClick={handleLogout}

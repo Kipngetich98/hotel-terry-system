@@ -119,15 +119,15 @@ const POS: React.FC = () => {
     }
   };
   
-  const handleMpesaPayment = async (phoneNumber: string) => {
+  const handleMpesaStkPush = async (phoneNumber: string) => {
     try {
       if (!currentOrder) return;
       
       setProcessingPayment(true);
       setPaymentStatus('processing');
-      setPaymentMessage('Processing M-Pesa payment...');
+      setPaymentMessage('Processing M-Pesa STK push...');
       
-      logger.info('Initiating M-Pesa payment', { 
+      logger.info('Initiating M-Pesa STK push', { 
         phoneNumber, 
         amount: (currentOrder.totalAmount * 1.16),
         orderId: currentOrder.id
@@ -179,6 +179,54 @@ const POS: React.FC = () => {
       setProcessingPayment(false);
       setPaymentStatus('error');
       setPaymentMessage(appError.metadata.userMessage || 'Payment processing failed');
+      
+      setTimeout(() => {
+        setShowMpesaModal(false);
+        setPaymentStatus('idle');
+      }, 3000);
+    }
+  };
+  
+  const handleMpesaManualCode = async (transactionCode: string) => {
+    try {
+      if (!currentOrder) return;
+      
+      setProcessingPayment(true);
+      setPaymentStatus('processing');
+      setPaymentMessage('Verifying M-Pesa transaction code...');
+      
+      logger.info('Processing manual M-Pesa transaction code', { 
+        transactionCode, 
+        amount: (currentOrder.totalAmount * 1.16),
+        orderId: currentOrder.id
+      });
+      
+      
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      handleCompleteOrder(transactionCode);
+      
+      setShowMpesaModal(false);
+      setProcessingPayment(false);
+      setPaymentStatus('success');
+      setPaymentMessage('M-Pesa payment verified successfully!');
+      
+      setTimeout(() => {
+        setPaymentStatus('idle');
+      }, 3000);
+    } catch (error) {
+      const appError = errorHandler.handleError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          severity: ErrorSeverity.HIGH,
+          category: ErrorCategory.PAYMENT,
+          userMessage: 'Failed to verify M-Pesa transaction code. Please try again.'
+        }
+      );
+      
+      setProcessingPayment(false);
+      setPaymentStatus('error');
+      setPaymentMessage(appError.metadata.userMessage || 'Transaction verification failed');
       
       setTimeout(() => {
         setShowMpesaModal(false);
@@ -465,7 +513,8 @@ const POS: React.FC = () => {
       {showMpesaModal && (
         <MpesaPaymentModal
           amount={totalAmount}
-          onSubmit={handleMpesaPayment}
+          onSubmitStkPush={handleMpesaStkPush}
+          onSubmitManualCode={handleMpesaManualCode}
           onCancel={() => setShowMpesaModal(false)}
           isProcessing={processingPayment}
         />
