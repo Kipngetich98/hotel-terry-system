@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { 
@@ -21,6 +21,8 @@ interface MenuItemDisplay {
   name: string;
   price: number;
   categoryId: number;
+  popularity?: number;
+  isCombo?: boolean;
 }
 
 const POS: React.FC = () => {
@@ -37,23 +39,30 @@ const POS: React.FC = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'error'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState<'popularity' | 'alphabetical' | 'price'>('popularity');
   
   const demoMenuItems: MenuItemDisplay[] = [
-    { id: 1, name: 'Chicken Curry', price: 850, categoryId: 1 },
-    { id: 2, name: 'Beef Stew', price: 950, categoryId: 1 },
-    { id: 3, name: 'Fish Fillet', price: 1200, categoryId: 1 },
-    { id: 4, name: 'Vegetable Rice', price: 450, categoryId: 2 },
-    { id: 5, name: 'Chapati', price: 50, categoryId: 2 },
-    { id: 6, name: 'Ugali', price: 100, categoryId: 2 },
-    { id: 7, name: 'Fresh Juice', price: 200, categoryId: 3 },
-    { id: 8, name: 'Soda', price: 100, categoryId: 3 },
-    { id: 9, name: 'Water', price: 50, categoryId: 3 },
+    { id: 1, name: 'Chicken Curry', price: 850, categoryId: 1, popularity: 95, isCombo: false },
+    { id: 2, name: 'Beef Stew', price: 950, categoryId: 1, popularity: 85, isCombo: false },
+    { id: 3, name: 'Fish Fillet', price: 1200, categoryId: 1, popularity: 75, isCombo: false },
+    { id: 4, name: 'Vegetable Rice', price: 450, categoryId: 2, popularity: 80, isCombo: false },
+    { id: 5, name: 'Chapati', price: 50, categoryId: 2, popularity: 90, isCombo: false },
+    { id: 6, name: 'Ugali', price: 100, categoryId: 2, popularity: 88, isCombo: false },
+    { id: 7, name: 'Fresh Juice', price: 200, categoryId: 3, popularity: 70, isCombo: false },
+    { id: 8, name: 'Soda', price: 100, categoryId: 3, popularity: 92, isCombo: false },
+    { id: 9, name: 'Water', price: 50, categoryId: 3, popularity: 65, isCombo: false },
+    { id: 10, name: 'Chicken & Chips Combo', price: 1200, categoryId: 4, popularity: 98, isCombo: true },
+    { id: 11, name: 'Fish & Ugali Combo', price: 1300, categoryId: 4, popularity: 94, isCombo: true },
+    { id: 12, name: 'Beef & Rice Combo', price: 1100, categoryId: 4, popularity: 96, isCombo: true },
+    { id: 13, name: 'Vegetarian Platter', price: 900, categoryId: 4, popularity: 82, isCombo: true },
   ];
   
   const demoCategories = [
     { id: 1, name: 'Main Dishes' },
     { id: 2, name: 'Sides' },
     { id: 3, name: 'Drinks' },
+    { id: 4, name: 'Combo Deals' },
   ];
   
   useEffect(() => {
@@ -286,9 +295,40 @@ const POS: React.FC = () => {
     }
   };
   
-  const filteredMenuItems = selectedCategoryId
-    ? demoMenuItems.filter(item => item.categoryId === selectedCategoryId)
-    : demoMenuItems;
+  const filteredAndSortedMenuItems = useMemo(() => {
+    let filtered = demoMenuItems.filter(item => {
+      if (searchTerm) {
+        return item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      
+      if (selectedCategoryId) {
+        return item.categoryId === selectedCategoryId;
+      }
+      
+      return true;
+    });
+    
+    switch (sortOption) {
+      case 'popularity':
+        return filtered.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+      case 'alphabetical':
+        return filtered.sort((a, b) => a.name.localeCompare(b.name));
+      case 'price':
+        return filtered.sort((a, b) => a.price - b.price);
+      default:
+        return filtered;
+    }
+  }, [demoMenuItems, searchTerm, selectedCategoryId, sortOption]);
+  
+  const popularItems = useMemo(() => {
+    return [...demoMenuItems]
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
+      .slice(0, 4);
+  }, [demoMenuItems]);
+  
+  const comboDeals = useMemo(() => {
+    return demoMenuItems.filter(item => item.isCombo);
+  }, [demoMenuItems]);
     
   const totalAmount = currentOrder ? (currentOrder.totalAmount * 1.16) : 0;
   
@@ -304,8 +344,39 @@ const POS: React.FC = () => {
       <div className="flex flex-1 gap-4 h-full">
         {/* Menu Section */}
         <div className="w-2/3 bg-white rounded-lg shadow overflow-hidden flex flex-col">
-          {/* Categories */}
+          {/* Search and Sort Controls */}
           <div className="p-4 border-b">
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search menu items..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                  />
+                  <div className="absolute left-3 top-2.5 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as 'popularity' | 'alphabetical' | 'price')}
+                  className="w-full md:w-auto px-4 py-2 border rounded-lg focus:ring-primary focus:border-primary"
+                >
+                  <option value="popularity">Sort by Popularity</option>
+                  <option value="alphabetical">Sort Alphabetically</option>
+                  <option value="price">Sort by Price</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Categories */}
             <div className="flex space-x-2 overflow-x-auto pb-2">
               <button
                 onClick={() => setSelectedCategoryId(null)}
@@ -334,18 +405,74 @@ const POS: React.FC = () => {
             </div>
           </div>
           
+          {/* Popular Items Section */}
+          {!searchTerm && selectedCategoryId === null && (
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold mb-3">Popular Items</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {popularItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleAddItem(item)}
+                    className="bg-white border-2 border-primary rounded-lg p-4 text-left hover:shadow-md transition-shadow relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 bg-primary text-white text-xs px-2 py-1 rounded-bl-lg">
+                      Popular
+                    </div>
+                    <div className="h-20 bg-gray-200 rounded-md mb-2"></div>
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-primary font-bold">KES {item.price.toFixed(2)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Combo Deals Section */}
+          {!searchTerm && (selectedCategoryId === null || selectedCategoryId === 4) && (
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold mb-3">Combo Deals</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {comboDeals.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => handleAddItem(item)}
+                    className="bg-white border border-yellow-400 rounded-lg p-4 text-left hover:shadow-md transition-shadow relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 bg-yellow-400 text-white text-xs px-2 py-1 rounded-bl-lg">
+                      Combo
+                    </div>
+                    <div className="h-20 bg-gray-200 rounded-md mb-2"></div>
+                    <h3 className="font-medium">{item.name}</h3>
+                    <p className="text-primary font-bold">KES {item.price.toFixed(2)}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Menu Items Grid */}
           <div className="flex-1 p-4 overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-3">
+              {searchTerm ? 'Search Results' : selectedCategoryId ? demoCategories.find(c => c.id === selectedCategoryId)?.name : 'All Items'}
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredMenuItems.map(item => (
+              {filteredAndSortedMenuItems.map(item => (
                 <button
                   key={item.id}
                   onClick={() => handleAddItem(item)}
-                  className="bg-white border rounded-lg p-4 text-left hover:shadow-md transition-shadow"
+                  className={`bg-white border rounded-lg p-4 text-left hover:shadow-md transition-shadow ${
+                    item.isCombo ? 'border-yellow-400' : ''
+                  }`}
                 >
                   <div className="h-24 bg-gray-200 rounded-md mb-2"></div>
                   <h3 className="font-medium">{item.name}</h3>
                   <p className="text-primary font-bold">KES {item.price.toFixed(2)}</p>
+                  {item.popularity && item.popularity > 90 && (
+                    <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
+                      Popular
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
