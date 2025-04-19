@@ -14,12 +14,14 @@ import KitchenDisplay from './pages/KitchenDisplay';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import OfflineIndicator from './components/OfflineIndicator';
+import AuthInitializer from './components/AuthInitializer';
 
 const App: React.FC = () => {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   return (
     <>
+      <AuthInitializer />
       <OfflineIndicator />
       <Routes>
         <Route path="/login" element={<Login />} />
