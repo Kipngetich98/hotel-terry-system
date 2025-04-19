@@ -13,7 +13,8 @@ export default defineConfig({
       'wise-shoes-beam.loca.lt',
       'ssh-key-generator-tunnel-b5j6w7bo.devinapps.com',
       'ssh-key-generatorapp-tunnel-6li7vzrb.devinapps.com',
-      'ssh-key-generator-tunnel-3wxp6sk1.devinapps.com'
+      'ssh-key-generator-tunnel-3wxp6sk1.devinapps.com',
+      'ssh-key-generator-tunnel-uuv7fh7w.devinapps.com'
     ],
   },
   build: {
@@ -28,7 +29,8 @@ export default defineConfig({
       'wise-shoes-beam.loca.lt',
       'ssh-key-generator-tunnel-b5j6w7bo.devinapps.com',
       'ssh-key-generatorapp-tunnel-6li7vzrb.devinapps.com',
-      'ssh-key-generator-tunnel-3wxp6sk1.devinapps.com'
+      'ssh-key-generator-tunnel-3wxp6sk1.devinapps.com',
+      'ssh-key-generator-tunnel-uuv7fh7w.devinapps.com'
     ],
   }
 });
