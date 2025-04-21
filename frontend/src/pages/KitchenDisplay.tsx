@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store';
 import logger from '../utils/logger';
 import errorHandler, { ErrorCategory, ErrorSeverity } from '../utils/errorHandler';
+import ReceiptPrinter from '../components/ReceiptPrinter';
 
 interface KitchenOrder {
   id: number;
@@ -617,9 +618,26 @@ const KitchenDisplay: React.FC = () => {
               >
                 Complete Order
               </button>
-              <button className="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600">
-                Print Ticket
-              </button>
+              <ReceiptPrinter
+                orderId={order.id}
+                tableNumber={order.tableNumber}
+                items={order.items.map(item => ({
+                  menuItemId: item.id,
+                  menuItemName: item.name,
+                  quantity: item.quantity,
+                  unitPrice: 0, // Not shown in kitchen ticket
+                  totalPrice: 0, // Not shown in kitchen ticket
+                  customization: item.notes ? { specialInstructions: item.notes } : undefined
+                }))}
+                subtotal={0} // Not relevant for kitchen
+                tax={0} // Not relevant for kitchen
+                total={0} // Not relevant for kitchen
+                paymentMethod={'pending'} // Will be updated when payment is processed
+                transactionReference={''}
+                paymentStatus={'pending'}
+                timestamp={order.createdAt}
+                isKitchenTicket={true}
+              />
             </div>
           </div>
         ))}

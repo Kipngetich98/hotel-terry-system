@@ -8,10 +8,13 @@ import {
   updateOrderItemQuantity,
   setPaymentMethod,
   setTransactionReference,
-  completeOrder
+  completeOrder,
+  setItemCustomization
 } from '../store/slices/orderSlice';
 import MpesaPaymentModal from '../components/modals/MpesaPaymentModal';
 import CashPaymentModal from '../components/modals/CashPaymentModal';
+import MenuItemCustomizationModal from '../components/modals/MenuItemCustomizationModal';
+import ReceiptPrinter from '../components/ReceiptPrinter';
 import logger from '../utils/logger';
 import errorHandler, { ErrorCategory, ErrorSeverity } from '../utils/errorHandler';
 import mpesaService from '../services/mpesaService';
@@ -23,6 +26,7 @@ interface MenuItemDisplay {
   categoryId: number;
   popularity?: number;
   isCombo?: boolean;
+  itemType?: 'meat' | 'vegetarian' | 'other';
 }
 
 const POS: React.FC = () => {
@@ -41,21 +45,23 @@ const POS: React.FC = () => {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState<'popularity' | 'alphabetical' | 'price'>('popularity');
+  const [showCustomizationModal, setShowCustomizationModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<MenuItemDisplay | null>(null);
   
   const demoMenuItems: MenuItemDisplay[] = [
-    { id: 1, name: 'Chicken Curry', price: 850, categoryId: 1, popularity: 95, isCombo: false },
-    { id: 2, name: 'Beef Stew', price: 950, categoryId: 1, popularity: 85, isCombo: false },
-    { id: 3, name: 'Fish Fillet', price: 1200, categoryId: 1, popularity: 75, isCombo: false },
-    { id: 4, name: 'Vegetable Rice', price: 450, categoryId: 2, popularity: 80, isCombo: false },
-    { id: 5, name: 'Chapati', price: 50, categoryId: 2, popularity: 90, isCombo: false },
-    { id: 6, name: 'Ugali', price: 100, categoryId: 2, popularity: 88, isCombo: false },
-    { id: 7, name: 'Fresh Juice', price: 200, categoryId: 3, popularity: 70, isCombo: false },
-    { id: 8, name: 'Soda', price: 100, categoryId: 3, popularity: 92, isCombo: false },
-    { id: 9, name: 'Water', price: 50, categoryId: 3, popularity: 65, isCombo: false },
-    { id: 10, name: 'Chicken & Chips Combo', price: 1200, categoryId: 4, popularity: 98, isCombo: true },
-    { id: 11, name: 'Fish & Ugali Combo', price: 1300, categoryId: 4, popularity: 94, isCombo: true },
-    { id: 12, name: 'Beef & Rice Combo', price: 1100, categoryId: 4, popularity: 96, isCombo: true },
-    { id: 13, name: 'Vegetarian Platter', price: 900, categoryId: 4, popularity: 82, isCombo: true },
+    { id: 1, name: 'Chicken Curry', price: 850, categoryId: 1, popularity: 95, isCombo: false, itemType: 'meat' },
+    { id: 2, name: 'Beef Stew', price: 950, categoryId: 1, popularity: 85, isCombo: false, itemType: 'meat' },
+    { id: 3, name: 'Fish Fillet', price: 1200, categoryId: 1, popularity: 75, isCombo: false, itemType: 'meat' },
+    { id: 4, name: 'Vegetable Rice', price: 450, categoryId: 2, popularity: 80, isCombo: false, itemType: 'vegetarian' },
+    { id: 5, name: 'Chapati', price: 50, categoryId: 2, popularity: 90, isCombo: false, itemType: 'vegetarian' },
+    { id: 6, name: 'Ugali', price: 100, categoryId: 2, popularity: 88, isCombo: false, itemType: 'vegetarian' },
+    { id: 7, name: 'Fresh Juice', price: 200, categoryId: 3, popularity: 70, isCombo: false, itemType: 'other' },
+    { id: 8, name: 'Soda', price: 100, categoryId: 3, popularity: 92, isCombo: false, itemType: 'other' },
+    { id: 9, name: 'Water', price: 50, categoryId: 3, popularity: 65, isCombo: false, itemType: 'other' },
+    { id: 10, name: 'Chicken & Chips Combo', price: 1200, categoryId: 4, popularity: 98, isCombo: true, itemType: 'meat' },
+    { id: 11, name: 'Fish & Ugali Combo', price: 1300, categoryId: 4, popularity: 94, isCombo: true, itemType: 'meat' },
+    { id: 12, name: 'Beef & Rice Combo', price: 1100, categoryId: 4, popularity: 96, isCombo: true, itemType: 'meat' },
+    { id: 13, name: 'Vegetarian Platter', price: 900, categoryId: 4, popularity: 82, isCombo: true, itemType: 'vegetarian' },
   ];
   
   const demoCategories = [
@@ -76,13 +82,34 @@ const POS: React.FC = () => {
   };
   
   const handleAddItem = (item: MenuItemDisplay) => {
+    if (item.itemType === 'other' || (item.categoryId === 3)) {
+      dispatch(addOrderItem({
+        menuItemId: item.id,
+        menuItemName: item.name,
+        quantity: 1,
+        unitPrice: item.price,
+        totalPrice: item.price,
+      }));
+    } else {
+      setSelectedItem(item);
+      setShowCustomizationModal(true);
+    }
+  };
+  
+  const handleAddItemWithCustomization = (customization: any) => {
+    if (!selectedItem) return;
+    
     dispatch(addOrderItem({
-      menuItemId: item.id,
-      menuItemName: item.name,
+      menuItemId: selectedItem.id,
+      menuItemName: selectedItem.name,
       quantity: 1,
-      unitPrice: item.price,
-      totalPrice: item.price,
+      unitPrice: selectedItem.price,
+      totalPrice: selectedItem.price,
+      customization
     }));
+    
+    setSelectedItem(null);
+    setShowCustomizationModal(false);
   };
   
   const handleRemoveItem = (menuItemId: number) => {
@@ -273,12 +300,50 @@ const POS: React.FC = () => {
         totalAmount: currentOrder?.totalAmount
       });
       
+      const completedOrderData = {
+        orderId: currentOrder?.id || 0,
+        tableNumber: tableNumber || 'Takeaway',
+        items: currentOrder?.items || [],
+        subtotal: currentOrder?.totalAmount || 0,
+        tax: (currentOrder?.totalAmount || 0) * 0.16,
+        total: (currentOrder?.totalAmount || 0) * 1.16,
+        paymentMethod: currentOrder?.paymentMethod || 'unknown',
+        transactionReference: transactionReference || currentOrder?.transactionReference || 'N/A',
+        paymentStatus: 'completed',
+        timestamp: new Date()
+      };
+      
+      const kitchenOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+      kitchenOrders.push(completedOrderData);
+      localStorage.setItem('kitchenOrders', JSON.stringify(kitchenOrders));
+      
+      const accountingData = JSON.parse(localStorage.getItem('accountingData') || '{}');
+      const dailySales = accountingData.dailySales || [];
+      dailySales.push({
+        orderId: completedOrderData.orderId,
+        amount: completedOrderData.total,
+        paymentMethod: completedOrderData.paymentMethod,
+        timestamp: completedOrderData.timestamp
+      });
+      accountingData.dailySales = dailySales;
+      localStorage.setItem('accountingData', JSON.stringify(accountingData));
+      
+      const inventoryData = JSON.parse(localStorage.getItem('inventoryData') || '[]');
+      localStorage.setItem('inventoryData', JSON.stringify(inventoryData));
+      
       setShowPaymentModal(false);
       setShowMpesaModal(false);
       setShowCashModal(false);
       setProcessingPayment(false);
       setPaymentStatus('success');
       setPaymentMessage('Payment successful! Order has been completed.');
+      
+      setTimeout(() => {
+        const receiptPrinterElement = document.getElementById('receipt-printer-button');
+        if (receiptPrinterElement) {
+          receiptPrinterElement.click();
+        }
+      }, 500);
       
       setTimeout(() => {
         setPaymentStatus('idle');
@@ -552,7 +617,7 @@ const POS: React.FC = () => {
             <button
               onClick={() => setShowPaymentModal(true)}
               disabled={!currentOrder || currentOrder.items.length === 0}
-              className="mt-4 w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${currentOrder && currentOrder.items.length > 0 ? 'mt-4' : 'mt-auto'} w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               Proceed to Payment
             </button>
@@ -655,6 +720,38 @@ const POS: React.FC = () => {
           onCancel={() => setShowCashModal(false)}
         />
       )}
+      
+      {/* Menu Item Customization Modal */}
+      {showCustomizationModal && selectedItem && (
+        <MenuItemCustomizationModal
+          isOpen={showCustomizationModal}
+          onClose={() => setShowCustomizationModal(false)}
+          onSave={handleAddItemWithCustomization}
+          itemName={selectedItem.name}
+          initialCustomization={{}}
+          itemType={selectedItem.itemType || 'other'}
+        />
+      )}
+      
+      {/* Hidden Receipt Printer Button */}
+      <div className="hidden">
+        {currentOrder && (
+          <ReceiptPrinter
+
+            orderId={currentOrder.id || 0}
+            tableNumber={tableNumber || 'Takeaway'}
+            items={currentOrder.items}
+            subtotal={currentOrder.totalAmount}
+            tax={currentOrder.totalAmount * 0.16}
+            total={currentOrder.totalAmount * 1.16}
+            paymentMethod={currentOrder.paymentMethod || 'unknown'}
+            transactionReference={currentOrder.transactionReference || 'N/A'}
+            paymentStatus={currentOrder.paymentStatus === 'paid' ? 'completed' : 'pending'}
+            timestamp={new Date()}
+            isKitchenTicket={false}
+          />
+        )}
+      </div>
     </div>
   );
 };

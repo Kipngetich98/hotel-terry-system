@@ -8,6 +8,11 @@ interface OrderItem {
   unitPrice: number;
   totalPrice: number;
   notes?: string;
+  customization?: {
+    spiceLevel?: 'mild' | 'medium' | 'spicy' | 'extra spicy';
+    cookingPreference?: 'rare' | 'medium rare' | 'medium' | 'medium well' | 'well done';
+    specialInstructions?: string;
+  };
 }
 
 interface Order {
@@ -123,6 +128,17 @@ const orderSlice = createSlice({
       
       state.currentOrder = null;
     },
+    setItemCustomization: (state, action: PayloadAction<{ menuItemId: number; customization: any }>) => {
+      if (!state.currentOrder) return;
+      
+      const item = state.currentOrder.items.find(
+        (item) => item.menuItemId === action.payload.menuItemId
+      );
+      
+      if (item) {
+        item.customization = action.payload.customization;
+      }
+    },
     fetchOrdersStart: (state) => {
       state.isLoading = true;
       state.error = null;
@@ -155,6 +171,7 @@ export const {
   setPaymentMethod,
   setTransactionReference,
   completeOrder,
+  setItemCustomization,
   fetchOrdersStart,
   fetchOrdersSuccess,
   fetchOrdersFailure,
