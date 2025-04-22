@@ -110,7 +110,8 @@ export default defineConfig({
       'ssh-key-generatorapp-tunnel-pjy31xyb.devinapps.com',
       'ssh-key-generator-tunnel-8wb1bprg.devinapps.com',
       'ssh-key-generator-tunnel-u6i6cylx.devinapps.com',
-      'ssh-key-generator-tunnel-h1jt3tat.devinapps.com'
+      'ssh-key-generator-tunnel-h1jt3tat.devinapps.com',
+      'ssh-key-generator-tunnel-wiamnel3.devinapps.com'
     ],
   },
   build: {
