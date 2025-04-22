@@ -29,13 +29,14 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(v, str):
             return v
-        return PostgresDsn.build(
+        url = PostgresDsn.build(
             scheme="postgresql",
             username=values.data.get("POSTGRES_USER"),
             password=values.data.get("POSTGRES_PASSWORD"),
             host=values.data.get("POSTGRES_SERVER"),
             path=f"{values.data.get('POSTGRES_DB') or ''}",
         )
+        return str(url)
 
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
