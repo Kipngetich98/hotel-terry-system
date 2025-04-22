@@ -48,9 +48,9 @@ class MpesaService {
 
   private constructor() {
     this.config = {
-      paybillNumber: process.env.MPESA_PAYBILL_NUMBER || 'DEMO_PAYBILL',
-      callbackUrl: process.env.MPESA_CALLBACK_URL || '/api/mpesa/callback',
-      baseUrl: process.env.MPESA_API_BASE_URL || '/api/mpesa',
+      paybillNumber: import.meta.env.VITE_MPESA_PAYBILL_NUMBER || 'DEMO_PAYBILL',
+      callbackUrl: import.meta.env.VITE_MPESA_CALLBACK_URL || '/api/mpesa/callback',
+      baseUrl: import.meta.env.VITE_MPESA_API_BASE_URL || '/api/mpesa',
     };
   }
 
