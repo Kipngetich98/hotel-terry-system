@@ -100,7 +100,8 @@ export default defineConfig({
       'ssh-key-generator-tunnel-azgf1926.devinapps.com',
       'ssh-key-generator-tunnel-2czh1mkw.devinapps.com',
       'ssh-key-generator-tunnel-rye6mgg6.devinapps.com',
-      'ssh-key-generator-tunnel-hgi1irer.devinapps.com'
+      'ssh-key-generator-tunnel-hgi1irer.devinapps.com',
+      'ssh-key-generator-tunnel-3vlrl99y.devinapps.com'
     ],
   },
   build: {
@@ -203,7 +204,8 @@ export default defineConfig({
       'ssh-key-generator-tunnel-azgf1926.devinapps.com',
       'ssh-key-generator-tunnel-2czh1mkw.devinapps.com',
       'ssh-key-generator-tunnel-rye6mgg6.devinapps.com',
-      'ssh-key-generator-tunnel-hgi1irer.devinapps.com'
+      'ssh-key-generator-tunnel-hgi1irer.devinapps.com',
+      'ssh-key-generator-tunnel-3vlrl99y.devinapps.com'
     ],
   }
 });
