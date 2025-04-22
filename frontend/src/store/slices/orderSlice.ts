@@ -61,6 +61,33 @@ const orderSlice = createSlice({
         paymentStatus: 'pending',
       };
     },
+    updateOrderStatus: (state, action: PayloadAction<{ orderId: number; status: string }>) => {
+      const { orderId, status } = action.payload;
+      const orderIndex = state.pendingOrders.findIndex(order => order.id === orderId);
+      
+      if (orderIndex !== -1) {
+        state.pendingOrders[orderIndex].status = status as any;
+        
+        if (status === 'delivered' || status === 'cancelled') {
+          const completedOrder = state.pendingOrders[orderIndex];
+          state.pendingOrders.splice(orderIndex, 1);
+          
+          if (!state.orders.some(order => order.id === orderId)) {
+            state.orders.push({
+              ...completedOrder,
+              status: status as any,
+              updatedAt: new Date().toISOString()
+            });
+          } else {
+            const orderIdx = state.orders.findIndex(order => order.id === orderId);
+            if (orderIdx !== -1) {
+              state.orders[orderIdx].status = status as any;
+              state.orders[orderIdx].updatedAt = new Date().toISOString();
+            }
+          }
+        }
+      }
+    },
     addOrderItem: (state, action: PayloadAction<OrderItem>) => {
       if (!state.currentOrder) return;
       
@@ -176,6 +203,7 @@ export const {
   fetchOrdersSuccess,
   fetchOrdersFailure,
   syncUnsyncedOrders,
+  updateOrderStatus,
 } = orderSlice.actions;
 
 export default orderSlice.reducer;

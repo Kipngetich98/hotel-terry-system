@@ -4,6 +4,7 @@ import { RootState } from '../store';
 import logger from '../utils/logger';
 import errorHandler, { ErrorCategory, ErrorSeverity } from '../utils/errorHandler';
 import ReceiptPrinter from '../components/ReceiptPrinter';
+import { updateOrderStatus } from '../store/slices/orderSlice';
 
 interface KitchenOrder {
   id: number;
@@ -432,15 +433,11 @@ const KitchenDisplay: React.FC = () => {
       
       if (!isOffline) {
         try {
-          dispatch({
-            type: 'order/completeOrder',
-            payload: {
-              orderId,
-              completedAt: now.toISOString(),
-              preparationTime: prepTimeMinutes
-            }
-          });
-          logger.info('Order status updated in Redux store', { orderId });
+          dispatch(updateOrderStatus({
+            orderId,
+            status: 'delivered'
+          }));
+          logger.info('Order status updated in Redux store', { orderId, status: 'delivered' });
         } catch (dispatchError) {
           logger.warn('Failed to update order status in Redux store', { error: dispatchError });
         }
