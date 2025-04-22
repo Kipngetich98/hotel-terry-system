@@ -21,11 +21,27 @@ interface KitchenOrder {
   estimatedTime: number; // in minutes
   completedAt?: Date;
   preparationTime?: number; // actual time taken in minutes
+  paymentStatus?: string; // Payment status for kitchen staff - can be any string value
 }
 
 const KitchenDisplay: React.FC = () => {
   const dispatch = useDispatch();
   const { isOffline } = useSelector((state: RootState) => state.ui);
+  
+  const getItemStation = (itemName: string): 'grill' | 'fryer' | 'cold_prep' | 'drinks' | 'dessert' => {
+    const lowerName = itemName.toLowerCase();
+    if (lowerName.includes('juice') || lowerName.includes('soda') || lowerName.includes('water') || lowerName.includes('tea') || lowerName.includes('coffee')) {
+      return 'drinks';
+    } else if (lowerName.includes('ice cream') || lowerName.includes('cake') || lowerName.includes('pudding') || lowerName.includes('sweet') || lowerName.includes('dessert')) {
+      return 'dessert';
+    } else if (lowerName.includes('salad') || lowerName.includes('sandwich') || lowerName.includes('wrap')) {
+      return 'cold_prep';
+    } else if (lowerName.includes('fries') || lowerName.includes('chips') || lowerName.includes('fried')) {
+      return 'fryer';
+    } else {
+      return 'grill'; // Default station for most food items
+    }
+  };
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
@@ -197,30 +213,95 @@ const KitchenDisplay: React.FC = () => {
   }, [isOffline]);
 
   useEffect(() => {
-    setOrders(demoOrders);
-    setCompletedOrders(demoCompletedOrders);
+    const { orders: storeOrders, pendingOrders } = useSelector((state: RootState) => state.order);
+    
+    const kitchenOrders = pendingOrders.map(order => ({
+      id: order.id || 0,
+      tableNumber: order.tableNumber || 'Takeaway',
+      items: order.items.map(item => ({
+        id: item.menuItemId,
+        name: item.menuItemName,
+        quantity: item.quantity,
+        notes: item.customization ? 
+          `${item.customization.specialInstructions || ''} 
+           ${item.customization.spiceLevel ? `Spice: ${item.customization.spiceLevel}` : ''} 
+           ${item.customization.cookingPreference ? `Cook: ${item.customization.cookingPreference}` : ''}`.trim() : '',
+        status: order.status === 'preparing' ? 'preparing' : 
+               order.status === 'ready' ? 'ready' : 'pending',
+        station: getItemStation(item.menuItemName)
+      })),
+      priority: order.id && order.id % 3 === 0 ? 'rush' : 
+               order.id && order.id % 2 === 0 ? 'high' : 'normal',
+      createdAt: order.createdAt ? new Date(order.createdAt) : new Date(),
+      estimatedTime: 15 + Math.floor(Math.random() * 15), // Random estimate between 15-30 mins
+      paymentStatus: order.paymentStatus || 'pending'
+    }));
+    
+    const savedCompletedOrders = localStorage.getItem('completedOrders');
+    const parsedCompletedOrders = savedCompletedOrders ? 
+      JSON.parse(savedCompletedOrders).map((order: any) => ({
+        ...order,
+        createdAt: new Date(order.createdAt),
+        completedAt: order.completedAt ? new Date(order.completedAt) : undefined
+      })) : [];
+    
+    if (kitchenOrders.length === 0 && parsedCompletedOrders.length === 0) {
+      setOrders(demoOrders);
+      setCompletedOrders(demoCompletedOrders);
+    } else {
+      const typedOrders = kitchenOrders.map(order => {
+        const kitchenOrder: KitchenOrder = {
+          id: order.id,
+          tableNumber: order.tableNumber,
+          items: order.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            quantity: item.quantity,
+            notes: item.notes,
+            status: (item.status as 'pending' | 'preparing' | 'ready' | 'delivered'),
+            station: item.station
+          })),
+          priority: (order.priority as 'normal' | 'high' | 'rush'),
+          createdAt: order.createdAt,
+          estimatedTime: order.estimatedTime,
+          paymentStatus: order.paymentStatus
+        };
+        return kitchenOrder;
+      });
+      
+      setOrders(typedOrders);
+      setCompletedOrders(parsedCompletedOrders);
+    }
+    
     setLastUpdated(new Date());
     
     const tables: {[key: string]: {status: string, orders: number}} = {};
-    demoOrders.forEach(order => {
-      tables[order.tableNumber] = {
-        status: 'active',
-        orders: 1
-      };
+    const ordersToUse = kitchenOrders.length > 0 ? kitchenOrders : demoOrders;
+    
+    ordersToUse.forEach(order => {
+      if (tables[order.tableNumber]) {
+        tables[order.tableNumber].orders += 1;
+      } else {
+        tables[order.tableNumber] = {
+          status: 'active',
+          orders: 1
+        };
+      }
     });
     setTableManagement(tables);
     
-    const totalPrepTime = demoCompletedOrders.reduce((total, order) => 
+    const completedToUse = parsedCompletedOrders.length > 0 ? parsedCompletedOrders : demoCompletedOrders;
+    const totalPrepTime = completedToUse.reduce((total, order) => 
       total + (order.preparationTime || 0), 0);
-    const avgTime = demoCompletedOrders.length > 0 ? 
-      totalPrepTime / demoCompletedOrders.length : 0;
+    const avgTime = completedToUse.length > 0 ? 
+      totalPrepTime / completedToUse.length : 0;
     
     setPerformanceMetrics({
       avgPrepTime: Math.round(avgTime * 10) / 10, // Round to 1 decimal place
-      ordersCompleted: demoCompletedOrders.length,
-      pendingOrders: demoOrders.length
+      ordersCompleted: completedToUse.length,
+      pendingOrders: ordersToUse.length
     });
-  }, []);
+  }, [useSelector((state: RootState) => state.order).pendingOrders]);
 
   const updateOrders = (updatedOrders: KitchenOrder[]) => {
     setOrders(updatedOrders);
@@ -290,7 +371,15 @@ const KitchenDisplay: React.FC = () => {
         preparationTime: prepTimeMinutes
       };
       
-      setCompletedOrders(prev => [completedOrder, ...prev]);
+      const updatedCompletedOrders = [completedOrder, ...completedOrders];
+      setCompletedOrders(updatedCompletedOrders);
+      
+      try {
+        localStorage.setItem('completedOrders', JSON.stringify(updatedCompletedOrders));
+        logger.info('Completed orders saved to localStorage', { count: updatedCompletedOrders.length });
+      } catch (storageError) {
+        logger.warn('Failed to save completed orders to localStorage', { error: storageError });
+      }
       
       setOrders(prev => prev.filter(order => order.id !== orderId));
       
@@ -334,6 +423,22 @@ const KitchenDisplay: React.FC = () => {
           orderId, 
           preparationTime: prepTimeMinutes 
         });
+      }
+      
+      if (!isOffline) {
+        try {
+          dispatch({
+            type: 'order/completeOrder',
+            payload: {
+              orderId,
+              completedAt: now.toISOString(),
+              preparationTime: prepTimeMinutes
+            }
+          });
+          logger.info('Order status updated in Redux store', { orderId });
+        } catch (dispatchError) {
+          logger.warn('Failed to update order status in Redux store', { error: dispatchError });
+        }
       }
       
       logger.info('Order completed successfully', { orderId, preparationTime: prepTimeMinutes });
@@ -537,6 +642,13 @@ const KitchenDisplay: React.FC = () => {
                 <p className="text-sm text-gray-500">{getTimeElapsed(order.createdAt)}</p>
               </div>
               <div className="flex items-center space-x-2">
+                <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                  order.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 
+                  order.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {(order.paymentStatus || 'pending').toUpperCase()}
+                </span>
                 <span className={`px-2 py-1 rounded-md text-xs font-medium ${getPriorityColor(order.priority)}`}>
                   {order.priority.toUpperCase()}
                 </span>
@@ -627,14 +739,21 @@ const KitchenDisplay: React.FC = () => {
                   quantity: item.quantity,
                   unitPrice: 0, // Not shown in kitchen ticket
                   totalPrice: 0, // Not shown in kitchen ticket
-                  customization: item.notes ? { specialInstructions: item.notes } : undefined
+                  customization: item.notes ? { 
+                    specialInstructions: item.notes,
+                    spiceLevel: item.notes.includes('Spice:') ? 
+                      item.notes.split('Spice:')[1].split(' ')[1] : undefined,
+                    cookingPreference: item.notes.includes('Cook:') ? 
+                      item.notes.split('Cook:')[1].trim() : undefined
+                  } : undefined
                 }))}
                 subtotal={0} // Not relevant for kitchen
                 tax={0} // Not relevant for kitchen
                 total={0} // Not relevant for kitchen
-                paymentMethod={'pending'} // Will be updated when payment is processed
+                paymentMethod={order.paymentStatus || 'pending'} // Show payment status
                 transactionReference={''}
-                paymentStatus={'pending'}
+                paymentStatus={(order.paymentStatus === 'paid' ? 'completed' : 
+                               order.paymentStatus === 'failed' ? 'failed' : 'pending') as 'pending' | 'completed' | 'failed'}
                 timestamp={order.createdAt}
                 isKitchenTicket={true}
               />
