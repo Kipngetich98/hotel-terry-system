@@ -245,7 +245,12 @@ const KitchenDisplay: React.FC = () => {
         completedAt: order.completedAt ? new Date(order.completedAt) : undefined
       })) : [];
     
-    if (kitchenOrders.length === 0 && parsedCompletedOrders.length === 0) {
+    const hasCompletedOrders = parsedCompletedOrders.length > 0;
+    const hasCompletedStoreOrders = storeOrders && storeOrders.some(order => 
+      order.status === 'delivered' || order.status === 'cancelled'
+    );
+    
+    if (kitchenOrders.length === 0 && !hasCompletedOrders && !hasCompletedStoreOrders) {
       setOrders(demoOrders);
       setCompletedOrders(demoCompletedOrders);
     } else {
