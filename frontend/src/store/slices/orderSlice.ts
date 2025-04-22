@@ -172,10 +172,28 @@ const orderSlice = createSlice({
     },
     fetchOrdersSuccess: (state, action: PayloadAction<Order[]>) => {
       state.isLoading = false;
-      state.orders = action.payload;
-      state.pendingOrders = action.payload.filter(
-        (order) => order.status !== 'delivered' && order.status !== 'cancelled'
-      );
+      
+      try {
+        const savedCompletedOrders = localStorage.getItem('completedOrders');
+        const completedOrderIds = savedCompletedOrders ? 
+          JSON.parse(savedCompletedOrders).map((order: any) => order.id) : [];
+          
+        const filteredOrders = action.payload.filter(order => 
+          !completedOrderIds.includes(order.id)
+        );
+        
+        state.orders = action.payload;
+        state.pendingOrders = filteredOrders.filter(
+          (order) => order.status !== 'delivered' && order.status !== 'cancelled'
+        );
+      } catch (error) {
+        console.error('Error processing completed orders from localStorage:', error);
+        state.orders = action.payload;
+        state.pendingOrders = action.payload.filter(
+          (order) => order.status !== 'delivered' && order.status !== 'cancelled'
+        );
+      }
+      
       state.error = null;
     },
     fetchOrdersFailure: (state, action: PayloadAction<string>) => {
